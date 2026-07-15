@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4          # required: gives the reviewer repo context
-      - uses: <your-org>/quiet-review@v1
+      - uses: MaansiBisht/quiet-review@v1
         with:
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           # or, instead:
