@@ -1,0 +1,28 @@
+name: "quiet-review"
+description: "An AI PR reviewer that stays quiet — comments only on likely bugs and behavior changes."
+author: "quiet-review"
+branding:
+  icon: "eye-off"
+  color: "purple"
+inputs:
+  anthropic-api-key:
+    description: "Anthropic API key. Provide this OR openai-api-key. Store as a repo secret."
+    required: false
+  openai-api-key:
+    description: "OpenAI API key. Provide this OR anthropic-api-key. Store as a repo secret."
+    required: false
+  min-severity:
+    description: "Lowest severity to comment on: bug | behavior-change."
+    required: false
+    default: "bug"
+  model:
+    description: "Review model id. Defaults per provider (claude-sonnet-5 / gpt-4o) if unset."
+    required: false
+    default: ""
+  github-token:
+    description: "Token used to read the PR and post comments."
+    required: false
+    default: "${{ github.token }}"
+runs:
+  using: "node20"
+  main: "dist/index.js"

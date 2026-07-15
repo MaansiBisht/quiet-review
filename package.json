@@ -1,0 +1,27 @@
+{
+  "name": "quiet-review",
+  "version": "0.1.0",
+  "description": "An AI PR reviewer that stays quiet — comments only on likely bugs and behavior changes.",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "ncc build src/index.ts -o dist --source-map --license licenses.txt",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test src/pipeline.test.ts"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/github": "^6.0.0",
+    "@anthropic-ai/sdk": "^0.32.1",
+    "openai": "^4.73.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@vercel/ncc": "^0.38.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true
+  }
+}

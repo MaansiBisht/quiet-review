@@ -1,0 +1,10 @@
+# Internal planning docs — kept local, not published
+PLAN.md
+ARCHITECTURE.md
+docs/
+
+# Node
+node_modules/
+*.log
+.env
+.env.*
