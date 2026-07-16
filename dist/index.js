@@ -35909,7 +35909,13 @@ async function run() {
     const files = (0, context_1.buildContext)(changed);
     const contextByPath = new Map(files.map((f) => [f.path, f]));
     const raw = await (0, review_1.reviewFiles)(llm, files);
+    for (const f of raw) {
+        core.info(`raw finding: ${f.file}:${f.line} [${f.severity}] ${f.why}`);
+    }
     const gated = (0, gate_1.gate)(raw, minSeverity);
+    for (const f of raw.filter((f) => !gated.includes(f))) {
+        core.info(`gate dropped: ${f.file}:${f.line} [${f.severity}] (min-severity: ${minSeverity})`);
+    }
     const confirmed = await (0, verify_1.verifyFindings)(llm, gated, contextByPath);
     core.info(`findings: ${raw.length} raw → ${gated.length} after gate → ${confirmed.length} confirmed`);
     await (0, github_1.postReview)(octokit, pr, confirmed);
@@ -36171,12 +36177,46 @@ exports.SEVERITY_RANK = {
 /***/ }),
 
 /***/ 5538:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.verifyFindings = verifyFindings;
+const core = __importStar(__nccwpck_require__(7484));
 const prompts_1 = __nccwpck_require__(6224);
 const MAX_TOKENS = 512;
 const VERDICT_SCHEMA = {
@@ -36199,8 +36239,11 @@ async function verifyFindings(llm, findings, contextByPath) {
     return findings.filter((_, i) => checks[i]);
 }
 async function isGrounded(llm, finding, ctx) {
-    if (!ctx)
-        return false; // no context to ground against => drop
+    const where = `${finding.file}:${finding.line}`;
+    if (!ctx) {
+        core.info(`verify dropped: ${where} — no file context to ground against`);
+        return false;
+    }
     try {
         const out = await llm.structured({
             model: llm.verifyModel,
@@ -36225,9 +36268,16 @@ ${ctx.context}
             schema: VERDICT_SCHEMA,
             maxTokens: MAX_TOKENS,
         });
-        return out?.grounded === true;
+        const verdict = out;
+        if (verdict?.grounded === true) {
+            core.info(`verify confirmed: ${where}`);
+            return true;
+        }
+        core.info(`verify rejected: ${where} — ${verdict?.reason ?? "no reason returned"}`);
+        return false;
     }
-    catch {
+    catch (err) {
+        core.info(`verify errored (finding dropped): ${where} — ${err instanceof Error ? err.message : String(err)}`);
         return false;
     }
 }

@@ -50,7 +50,13 @@ async function run(): Promise<void> {
   const contextByPath = new Map(files.map((f) => [f.path, f]));
 
   const raw = await reviewFiles(llm, files);
+  for (const f of raw) {
+    core.info(`raw finding: ${f.file}:${f.line} [${f.severity}] ${f.why}`);
+  }
   const gated = gate(raw, minSeverity);
+  for (const f of raw.filter((f) => !gated.includes(f))) {
+    core.info(`gate dropped: ${f.file}:${f.line} [${f.severity}] (min-severity: ${minSeverity})`);
+  }
   const confirmed = await verifyFindings(llm, gated, contextByPath);
 
   core.info(

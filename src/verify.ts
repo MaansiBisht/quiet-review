@@ -1,3 +1,5 @@
+import * as core from "@actions/core";
+
 import { Finding, FileContext } from "./types";
 import { VERIFY_SYSTEM } from "./prompts";
 import { Llm } from "./llm";
@@ -36,7 +38,11 @@ async function isGrounded(
   finding: Finding,
   ctx: FileContext | undefined,
 ): Promise<boolean> {
-  if (!ctx) return false; // no context to ground against => drop
+  const where = `${finding.file}:${finding.line}`;
+  if (!ctx) {
+    core.info(`verify dropped: ${where} — no file context to ground against`);
+    return false;
+  }
 
   try {
     const out = await llm.structured({
@@ -62,8 +68,17 @@ ${ctx.context}
       schema: VERDICT_SCHEMA,
       maxTokens: MAX_TOKENS,
     });
-    return (out as { grounded?: boolean } | null)?.grounded === true;
-  } catch {
+    const verdict = out as { grounded?: boolean; reason?: string } | null;
+    if (verdict?.grounded === true) {
+      core.info(`verify confirmed: ${where}`);
+      return true;
+    }
+    core.info(`verify rejected: ${where} — ${verdict?.reason ?? "no reason returned"}`);
+    return false;
+  } catch (err) {
+    core.info(
+      `verify errored (finding dropped): ${where} — ${err instanceof Error ? err.message : String(err)}`,
+    );
     return false;
   }
 }
